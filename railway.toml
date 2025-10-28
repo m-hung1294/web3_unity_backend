@@ -1,6 +1,3 @@
-[build]
-builder = "paketobuildpacks/builder:base"
-
 [env]
 PYTHONUNBUFFERED = "1"
 
