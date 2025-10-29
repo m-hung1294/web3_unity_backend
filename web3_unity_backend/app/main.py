@@ -2,12 +2,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import os
 
-from .routes import chain, wallet
+from .routes import chain, wallet, leaderboard
 from .models import init_db
 
 app = FastAPI(title="Unity Web3 Backend")
 
-# Cấu hình CORS (cho phép Unity WebGL truy cập)
+# 🧱 Cấu hình CORS (cho phép Unity WebGL truy cập)
 origins = os.getenv("CORS_ORIGINS", "").split(",")
 origins = [o.strip() for o in origins if o.strip()]
 app.add_middleware(
@@ -18,16 +18,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Tạo DB nếu chưa có
+# 🗄️ Tạo database nếu chưa có
 init_db()
 
-# Gắn router
+# 🔗 Gắn các router
 app.include_router(chain.router)
 app.include_router(wallet.router)
+app.include_router(leaderboard.router)
 
 @app.get("/health")
 def health():
-    return {"ok": True}
+    return {"ok": True, "status": "running"}
 
 if __name__ == "__main__":
     import uvicorn
