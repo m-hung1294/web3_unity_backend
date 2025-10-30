@@ -3,14 +3,12 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 from ..models import Score, get_db
 
-router = APIRouter(tags=["Leaderboard"])
+# ✅ Router có prefix /leaderboard
+router = APIRouter(prefix="/leaderboard", tags=["Leaderboard"])
 
-# --------------------------
-# 🟢 Route gốc: /daily & /all-time (Unity đang gọi)
-# --------------------------
-
+# 🟢 GET /leaderboard/daily
 @router.get("/daily")
-def get_daily_direct(db: Session = Depends(get_db)):
+def get_daily(db: Session = Depends(get_db)):
     try:
         start_of_day = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
         scores = (
@@ -29,11 +27,12 @@ def get_daily_direct(db: Session = Depends(get_db)):
             ],
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Lỗi /daily: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Lỗi /leaderboard/daily: {str(e)}")
 
 
+# 🔵 GET /leaderboard/all-time
 @router.get("/all-time")
-def get_all_time_direct(db: Session = Depends(get_db)):
+def get_all_time(db: Session = Depends(get_db)):
     try:
         scores = db.query(Score).order_by(Score.score.desc()).limit(10).all()
         return {
@@ -45,19 +44,17 @@ def get_all_time_direct(db: Session = Depends(get_db)):
             ],
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Lỗi /all-time: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Lỗi /leaderboard/all-time: {str(e)}")
 
 
-# --------------------------
-# 🟣 Giữ nguyên các API có prefix /leaderboard
-# --------------------------
-
-router2 = APIRouter(prefix="/leaderboard", tags=["Leaderboard"])
-
-@router2.get("/daily")
-def get_daily_prefixed(db: Session = Depends(get_db)):
-    return get_daily_direct(db)
-
-@router2.get("/all-time")
-def get_all_time_prefixed(db: Session = Depends(get_db)):
-    return get_all_time_direct(db)
+# 🟣 POST /leaderboard/submit
+@router.post("/submit")
+def submit_score(wallet: str, score: float, session_id: str, db: Session = Depends(get_db)):
+    try:
+        new_score = Score(wallet=wallet.lower(), score=score, session_id=session_id)
+        db.add(new_score)
+        db.commit()
+        return {"ok": True, "wallet": wallet, "score": score}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Lỗi lưu điểm: {e}")
